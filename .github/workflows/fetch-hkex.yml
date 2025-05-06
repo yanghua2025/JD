@@ -2,8 +2,8 @@ name: Fetch HKEX OHLC once
 
 on:
   schedule:
-    # 05:20 Beijing time = previous day 21:20 UTC
-    - cron: '20 21 * * *'
+    # 16:30 Beijing time = previous day 21:20 UTC
+    - cron: '30 8 * * *'
   workflow_dispatch:
 
 jobs:
