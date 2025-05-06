@@ -1,9 +1,13 @@
-import argparse, json, pathlib, datetime, requests, sys
+import argparse, datetime, json, pathlib, requests, sys
 
 def fetch_yahoo(code):
-    # Yahoo 需要加 .HK
-    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{code}.HK?range=1d&interval=1d"
-    data = requests.get(url, timeout=10).json()
+    # Yahoo 使用阿拉伯数字代码并加 .HK
+    symbol = f"{int(code)}.HK"
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?range=1d&interval=1d"
+    headers = {"User-Agent": "Mozilla/5.0"}
+    resp = requests.get(url, headers=headers, timeout=10)
+    resp.raise_for_status()
+    data = resp.json()
     quote = data["chart"]["result"][0]
     ohlc = quote["indicators"]["quote"][0]
     open_, high_, low_, close_ = (
@@ -16,16 +20,19 @@ def fetch_yahoo(code):
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--code", required=True)         # 5-digit, e.g. 02618
+    p.add_argument("--code", required=True)   # e.g. 02618
     args = p.parse_args()
 
     try:
-        ohlc = fetch_yahoo(args.code.lstrip("0"))
+        ohlc = fetch_yahoo(args.code)
     except Exception as e:
         print("Fetch error:", e, file=sys.stderr)
         sys.exit(1)
 
-    date_str = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8))).strftime("%Y-%m-%d")
+    date_str = datetime.datetime.now(
+        datetime.timezone(datetime.timedelta(hours=8))
+    ).strftime("%Y-%m-%d")
+
     pathlib.Path("latest_price.json").write_text(
         json.dumps({"code": args.code, "date": date_str, "source": "Yahoo", "ohlc": ohlc}, indent=2)
     )
