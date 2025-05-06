@@ -1,49 +1,34 @@
+import argparse, json, pathlib, datetime, requests, sys
 
-# fetch_hkex.py
-# --------------
-# Download HKEX official CSV (anonymous) and save as latest_price.json
-#
-# Usage:
-#   pip install requests
-#   python fetch_hkex.py --code 02618             # default: today HK date
-#   python fetch_hkex.py --code 02618 --date 2025-05-06
-import argparse, datetime, json, pathlib, requests, sys
-
-API = "https://dce1hkexted.blob.core.windows.net/hquotes/CSV/{date}/{code}.csv"
-
-def fetch(code, date_str):
-    url = API.format(code=code, date=date_str)
-    resp = requests.get(url, timeout=10)
-    resp.raise_for_status()
-    return resp.text
-
-def parse(csv_text):
-    # Date,Open,High,Low,Close,Volume
-    line = csv_text.strip().splitlines()[-1]
-    _, o, h, l, c, _ = line.split(",")
-    return dict(open=float(o), high=float(h), low=float(l), close=float(c))
+def fetch_yahoo(code):
+    # Yahoo 需要加 .HK
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{code}.HK?range=1d&interval=1d"
+    data = requests.get(url, timeout=10).json()
+    quote = data["chart"]["result"][0]
+    ohlc = quote["indicators"]["quote"][0]
+    open_, high_, low_, close_ = (
+        ohlc["open"][0],
+        ohlc["high"][0],
+        ohlc["low"][0],
+        ohlc["close"][0],
+    )
+    return dict(open=open_, high=high_, low=low_, close=close_)
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--code", required=True)
-    p.add_argument("--date")
+    p.add_argument("--code", required=True)         # 5-digit, e.g. 02618
     args = p.parse_args()
 
-    if args.date:
-        date_str = args.date
-    else:
-        tz = datetime.timezone(datetime.timedelta(hours=8))
-        date_str = datetime.datetime.now(tz).strftime("%Y-%m-%d")
-
     try:
-        csv_text = fetch(args.code, date_str)
-        ohlc = parse(csv_text)
+        ohlc = fetch_yahoo(args.code.lstrip("0"))
     except Exception as e:
         print("Fetch error:", e, file=sys.stderr)
         sys.exit(1)
 
-    data = {"code": args.code, "date": date_str, "ohlc": ohlc}
-    pathlib.Path("latest_price.json").write_text(json.dumps(data, ensure_ascii=False, indent=2))
+    date_str = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8))).strftime("%Y-%m-%d")
+    pathlib.Path("latest_price.json").write_text(
+        json.dumps({"code": args.code, "date": date_str, "source": "Yahoo", "ohlc": ohlc}, indent=2)
+    )
     print("Saved latest_price.json")
 
 if __name__ == "__main__":
