@@ -1,10 +1,9 @@
 name: Fetch HKEX OHLC once
 
 on:
-  workflow_dispatch:
   schedule:
-    # 16:20 北京时间 = 08:20 UTC
     - cron: '20 8 * * *'
+  workflow_dispatch:
 
 jobs:
   fetch:
