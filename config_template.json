@@ -1,0 +1,5 @@
+{
+  "stock_code": "02618",
+  "use_official_ohlc": true,
+  "ohlc_file": "latest_price.json"
+}
