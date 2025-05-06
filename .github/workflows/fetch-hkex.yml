@@ -1,7 +1,9 @@
 name: Fetch HKEX OHLC once
 
 on:
-  workflow_dispatch:    # 允许手动按钮触发
+  schedule:
+    # 16:20 北京时间 = 08:20 UTC
+    - cron: '20 8 * * *'
 
 jobs:
   fetch:
